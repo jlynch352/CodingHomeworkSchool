@@ -1,0 +1,10 @@
+1. Job Submission Information
+18069334	ondemand/sys/dashboard/sys/bc_hcc_codeserver/swan	jlynch35	cse479	00:13:11	batch	Running	Swan
+
+
+2. Answer to question two
+
+The reason that the increase in the number of zeros isn’t exactly proportional to the given dropout rate is that when dropout 
+is applied to a layer, some activations are randomly selected to be zero. However, especially when using an 
+activation function like ReLU, some activations might already be zero. Thus, dropout might select values that 
+are already zero, which doesn’t increase the number of zeros.
