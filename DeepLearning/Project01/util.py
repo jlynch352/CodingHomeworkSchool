@@ -38,7 +38,7 @@ def load_fashion_mnist(val_split=0.2, random_state=42):
 
 
 
-def plot_confusion_matrix(y_true, y_pred, title='Confusion Matrix', save_path='/images/confusion_matrix.png'):
+def plot_confusion_matrix(y_true, y_pred, title='Confusion Matrix', save_path=None):
     #convert one-hot labels and model predictions into class IDs
     y_true = np.asarray(y_true)
     y_pred = np.asarray(y_pred)
@@ -49,7 +49,7 @@ def plot_confusion_matrix(y_true, y_pred, title='Confusion Matrix', save_path='/
 
     #class names
     class_names = [
-        'Shirt', 'Trouser', 'Pullover', 'Dress', 'Coat',
+        'T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat',
         'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle boot'
     ]
 
@@ -126,12 +126,8 @@ def plot_predictions(image, y_true, y_pred, save_path=None):
     return fig
 
 
-'''
-methods below need chaning
 
-'''
 def plot_training_history(history, save_path=None):
-    """Plot training and validation loss/accuracy from model.fit() history."""
     epochs = np.asarray(history.epoch) + 1
     fig, axes = plt.subplots(1, 2, figsize=(10, 4))
 
@@ -158,13 +154,7 @@ def plot_training_history(history, save_path=None):
 
 
 def plot_saliency(model, image, save_path=None):
-    """Plot one raw 28x28 image and sensitivity of its predicted probability.
-
-    Brighter pixels have larger absolute gradients. Values are scaled within
-    this image; they show local sensitivity, not whether a pixel supports or
-    opposes the prediction. Returns the figure.
-    """
-    #add a batch dimension; the model handles normalization
+    #Set up the input tensor for the model
     inputs = tf.convert_to_tensor(image[None, ...], dtype=tf.float32)
     with tf.GradientTape() as tape:
         tape.watch(inputs)
@@ -181,6 +171,8 @@ def plot_saliency(model, image, save_path=None):
         'T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat',
         'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle boot'
     ]
+
+    #create the plot
     fig, axes = plt.subplots(1, 2, figsize=(8, 4))
     axes[0].imshow(image, cmap='gray')
     axes[0].set_title('Original image')
@@ -197,3 +189,47 @@ def plot_saliency(model, image, save_path=None):
     if save_path is not None:
         fig.savefig(save_path, dpi=300, bbox_inches='tight')
     return fig
+
+
+def visualize_predictions(model, x_test, y_test, predictions, images_dir, n_correct=4, n_incorrect=4):
+    #get the predicted and true classes
+    predicted_labels = predictions.argmax(axis=1)
+    true_labels = y_test.argmax(axis=1)
+    correct_indices = np.flatnonzero(predicted_labels == true_labels)
+    incorrect_indices = np.flatnonzero(predicted_labels != true_labels)
+
+    #randomly select correct and incorrect examples
+    rng = np.random.default_rng(42)
+    sample_indices = np.concatenate([
+        rng.choice(correct_indices, size=n_correct, replace=False),
+        rng.choice(incorrect_indices, size=n_incorrect, replace=False),
+    ])
+
+    class_names = [
+        'T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat',
+        'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle boot'
+    ]
+
+    #save prediction and saliency plots for each example
+    print('\nSaving prediction and saliency figures for sample test examples:')
+    for rank, index in enumerate(sample_indices):
+        prediction_fig = plot_predictions(
+            x_test[index], y_test[index], predictions[index],
+            save_path=images_dir / f'prediction_{rank}.png',
+        )
+        saliency_fig = plot_saliency(
+            model, x_test[index],
+            save_path=images_dir / f'saliency_{rank}.png',
+        )
+        plt.close(prediction_fig)
+        plt.close(saliency_fig)
+
+        #print the actual label and prediction
+        true_class = class_names[true_labels[index]]
+        predicted_class = class_names[predicted_labels[index]]
+        outcome = 'correct' if true_class == predicted_class else 'incorrect'
+        print(
+            f'  Example {rank} (test index {index}): true={true_class}, '
+            f'predicted={predicted_class} ({outcome})'
+        )
+    print(f'Figures saved to {images_dir}')
